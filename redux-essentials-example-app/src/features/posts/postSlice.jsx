@@ -1,37 +1,16 @@
-import {createSlice, nanoid} from '@reduxjs/toolkit';
-import { sub } from 'date-fns';
+import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
+import {client} from '../../api/client';
 
-const initialState = [
-    { id: '1', title: 'First Post!', content: 'Hello!',
-        date: sub(new Date(), {minutes:10}).toISOString(),
-        reactions: {thumbsUp: 0, hooray: 0, heart: 0, rocket: 0, eyes: 0}
-    },
-    { id: '2', title: 'Second Post', content: 'More text',date: sub(new Date(), {minutes:10}).toISOString(),
-    reactions: {thumbsUp: 0, hooray: 0, heart: 0, rocket: 0, eyes: 0}
- }
-]
+const initialState = {
+    posts: [],
+    status: "idle",
+    error: null
+}
 
 const postSlice = createSlice({
     name:'posts',
     initialState,
     reducers: {
-        postAdded: {
-            reducer(state, action) {
-                state.push(action.payload);
-            },
-            prepare(title, content, userId) {
-                return {
-                    payload: {
-                        id: nanoid(),
-                        title,
-                        date: new Date().toISOString(),
-                        content,
-                        userId,
-                        reactions: {thumbsUp: 0, hooray: 0, heart: 0, rocket: 0, eyes: 0}
-                    }
-                }
-            }
-        },
         postUpdated(state,action) {
             const {id, title, content} = action.payload;
             const existingPost = state.posts.find(post => post.id === id);
@@ -49,9 +28,48 @@ const postSlice = createSlice({
                 existingPost.reactions[reaction]++;
             }
         }
+    },
+    extraReducers(builder) {
+        builder
+            .addCase(fetchPosts.pending, (state, action) => {
+                state.status = 'loading'
+            })
+            .addCase(fetchPosts.fulfilled, (state, action) => {
+                state.status = 'succeeded'
+                // Add any fetched posts to the array
+                state.posts = state.posts.concat(action.payload)
+            })
+            .addCase(fetchPosts.rejected, (state, action) => {
+                state.status = 'failed'
+                state.error = action.error.message
+            })
+            .addCase(addNewPost.fulfilled, (state, action) => {
+                // 我们可以直接将新的帖子对象添加到我们的帖子数组中
+                state.posts.push(action.payload)
+            })
     }
 })
 
 export const {postAdded, postUpdated, reactionAdded} = postSlice.actions;
 
 export default postSlice.reducer;
+
+export const selectAllPosts = state => state.posts.posts;
+
+export const selectPostById = (state, postId) => state.posts.posts.find(post => post.id === postId);
+
+export const fetchPosts = createAsyncThunk('posts/fetchPosts', async () => {
+    const response = await client.get('/fakeApi/posts');
+    return response.data;
+})
+
+export const addNewPost = createAsyncThunk(
+    'posts/addNewPost',
+    // payload 创建者接收部分“{title, content, user}”对象
+    async initialPost => {
+        // 我们发送初始数据到 API server
+        const response = await client.post('/fakeApi/posts', initialPost)
+        // 响应包括完整的帖子对象，包括唯一 ID
+        return response.data
+    }
+)
