@@ -1,13 +1,16 @@
-import PostsList from "./features/posts/PostsList"
-import AddPostForm from "./features/posts/AddPostForm"
+import { Outlet } from "react-router-dom";
+import Header from "./components/Header";
 
 const App = () => {
   return (
-      <main className="app">
-        <AddPostForm />
-        <PostsList />
+    <>
+      <Header/>
+      <main className="App">
+          <Outlet/>
       </main>
+   </>
   )
 }
+
 
 export default App;

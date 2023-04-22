@@ -27,6 +27,17 @@ export const addNewPost = createAsyncThunk('posts/addNewPost', async () => {
     }
 })
 
+export const updatePost = createAsyncThunk('posts/updatePost', async (initialPost) => {
+    const { id } = initialPost;
+    try {
+        const response = await axios.put(`${POST_URL}/${id}`, initialPost)
+        return response.data
+    } catch (err) {
+        //return err.message;
+        return initialPost; // only for testing Redux!
+    }
+})
+
 const postsSlice = createSlice({
     name: 'posts',
     initialState,
@@ -114,6 +125,10 @@ const postsSlice = createSlice({
 export const selectAllPost = state => state.posts.posts;
 export const getPostStatus = state => state.posts.status;
 export const getPostError = state => state.posts.error;
+
+export const selectPostById = (state, postId) => {
+    state.posts.posts.find(post => post.id === postId)
+}
 
 export const { postAdded, reactionAdded } = postsSlice.actions;
 
